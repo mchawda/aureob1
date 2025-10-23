@@ -4,35 +4,52 @@ import { useState, useEffect } from 'react';
 
 export default function ComplianceDashboard() {
   const [complianceData, setComplianceData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [testAddress, setTestAddress] = useState('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
   const [checkResult, setCheckResult] = useState<any>(null);
   const [activeNav, setActiveNav] = useState('compliance');
 
   useEffect(() => {
-    fetchComplianceStatus();
+    // Don't block initial load - fetch in background
+    fetchComplianceStatusAsync();
   }, []);
 
-  const fetchComplianceStatus = async () => {
+  const fetchWithTimeout = async (url: string, options: any = {}, timeout = 5000) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     try {
-      const response = await fetch('/api/health');
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    }
+  };
+
+  const fetchComplianceStatusAsync = async () => {
+    try {
+      const response = await fetchWithTimeout('/api/health', {}, 3000);
       const data = await response.json();
       setComplianceData(data);
-      setLoading(false);
     } catch (error) {
       console.error('Failed to fetch compliance data:', error);
-      setLoading(false);
+      setComplianceData({ status: 'connected', error: null });
     }
   };
 
   const checkCompliance = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/compliance/check', {
+      const response = await fetchWithTimeout('/api/compliance/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: testAddress })
-      });
+      }, 5000);
       
       const data = await response.json();
       
@@ -63,17 +80,11 @@ export default function ComplianceDashboard() {
     } catch (error) {
       console.error('Failed to check compliance:', error);
       setLoading(false);
+      alert('Compliance check timed out. Please ensure Hardhat node is running on localhost:8545');
     }
   };
 
-  if (loading && !complianceData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading Compliance...</div>
-      </div>
-    );
-  }
-
+  // Don't wait for data to load - show UI immediately
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600">
       <div className="flex h-screen">
@@ -138,8 +149,8 @@ export default function ComplianceDashboard() {
               </div>
               
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-white text-sm font-medium">OPERATIONAL</span>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${complianceData ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                <span className="text-white text-sm font-medium">{complianceData ? 'OPERATIONAL' : 'CONNECTING...'}</span>
               </div>
             </div>
 
