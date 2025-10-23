@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package qsettlement.chain.types;
+
+// BlockHeader defines the structure of a block header with post-quantum cryptography support
+message BlockHeader {
+  // Standard Ethereum-compatible fields
+  bytes  parent_hash   = 1;  // Keccak256 hash of parent block
+  bytes  state_root    = 2;  // Root hash of state trie
+  bytes  txs_root      = 3;  // Root hash of transactions trie
+  bytes  receipts_root = 4;  // Root hash of receipts trie
+  uint64 number        = 5;  // Block height/number
+  uint64 timestamp     = 6;  // Unix timestamp
+  bytes  miner         = 7;  // Validator/proposer address
+  bytes  mix_hash      = 8;  // Reserved for compatibility (unused in PoA)
+  uint64 base_fee      = 9;  // EIP-1559 base fee per gas
+  
+  // Post-Quantum Cryptography Fields (Phase 1)
+  bytes  pq_commit     = 10; // H(header_without_pq_fields || consensus_round_meta)
+                             // Computed as: keccak256(RLP(header without PQ fields))
+  bytes  pq_sig        = 11; // Dilithium2 signature by proposer
+                             // Size: ~2.7-3.0 KB for Dilithium2
+  bytes  pq_agg_sig    = 12; // Optional: aggregated committee signature (BLS-like API but PQ)
+                             // Reduces header size by aggregating multiple validator sigs
+  
+  // Validator & Consensus Metadata
+  bytes  proposer_pubkey = 13; // Dilithium2 public key of proposer (~1.3 KB)
+  uint64 round          = 14;  // Consensus round number
+  uint32 committed_validators = 15; // Count of validators that committed
+}
+
+// PQSignatureMetadata contains additional PQ signature information
+message PQSignatureMetadata {
+  string algo    = 1;  // "dilithium2", "dilithium3", etc.
+  bytes  pubkey  = 2;  // Signer's PQ public key
+  bytes  sig     = 3;  // PQ signature bytes
+  uint64 timestamp = 4; // When signature was created
+}
+
+// BlockHeaderWithPQFields wraps a block header with its PQ-specific metadata
+message BlockHeaderWithPQFields {
+  BlockHeader header = 1;
+  repeated PQSignatureMetadata validator_sigs = 2; // Individual validator signatures
+  bytes aggregated_sig = 3; // Aggregated signature if using BLS-style aggregation
+}

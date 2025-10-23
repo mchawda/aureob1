@@ -1,0 +1,106 @@
+# Quantum Settlement Node Validator Configuration
+# Post-Quantum Cryptography (PQC) Validator Setup
+
+# Validator Network Configuration
+network:
+  name: "qsettlement-mainnet"
+  chain_id: "qsn-001"
+  consensus: "tendermint-pqc"
+  block_time: "1s"
+  max_validators: 100
+
+# Post-Quantum Cryptography Settings
+pqcrypto:
+  # Primary signature scheme
+  signature_scheme: "dilithium2"
+  # Key encapsulation mechanism
+  kem_scheme: "kyber768"
+  # Hash function
+  hash_function: "sha3-256"
+  
+  # Dilithium parameters
+  dilithium:
+    security_level: 2  # Level 2 (128-bit security)
+    key_size: 1312     # Public key size in bytes
+    signature_size: 2420  # Signature size in bytes
+    
+  # Kyber parameters  
+  kyber:
+    security_level: 768  # Kyber-768
+    key_size: 1184       # Public key size in bytes
+    ciphertext_size: 1088  # Ciphertext size in bytes
+
+# Validator Configuration
+validators:
+  - name: "qsn-validator-01"
+    address: "qsn1validator01..."
+    pub_key_type: "tendermint/PubKeyDilithium2"
+    voting_power: 1000000
+    commission_rate: "0.05"
+    
+  - name: "qsn-validator-02" 
+    address: "qsn1validator02..."
+    pub_key_type: "tendermint/PubKeyDilithium2"
+    voting_power: 1000000
+    commission_rate: "0.05"
+    
+  - name: "qsn-validator-03"
+    address: "qsn1validator03..."
+    pub_key_type: "tendermint/PubKeyDilithium2" 
+    voting_power: 1000000
+    commission_rate: "0.05"
+
+# Network Security
+security:
+  # Minimum stake required to become validator
+  min_stake: "1000000qsn"
+  # Slashing conditions
+  slashing:
+    double_sign: "0.05"      # 5% slash for double signing
+    downtime: "0.01"         # 1% slash for downtime
+  # Unbonding period
+  unbonding_period: "21d"
+
+# API Configuration
+api:
+  enabled: true
+  listen_address: "tcp://0.0.0.0:1317"
+  cors_allowed_origins: ["*"]
+  cors_allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+  cors_allowed_headers: ["*"]
+
+# RPC Configuration  
+rpc:
+  enabled: true
+  listen_address: "tcp://0.0.0.0:26657"
+  cors_allowed_origins: ["*"]
+  max_open_connections: 1000
+
+# P2P Configuration
+p2p:
+  listen_address: "tcp://0.0.0.0:26656"
+  external_address: ""
+  persistent_peers: ""
+  seeds: ""
+  max_num_inbound_peers: 40
+  max_num_outbound_peers: 10
+
+# State Sync
+statesync:
+  enable: false
+  rpc_servers: ""
+  trust_height: 0
+  trust_hash: ""
+
+# Fast Sync
+fast_sync:
+  version: "v0"
+
+# Consensus Configuration
+consensus:
+  timeout_commit: "1s"
+  timeout_prevote: "1s" 
+  timeout_precommit: "1s"
+  timeout_propose: "3s"
+  create_empty_blocks: true
+  create_empty_blocks_interval: "0s"

@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Build outputs
+dist/
+build/
+*.o
+*.a
+*.so
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.iml
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Hardhat
+artifacts/
+cache/
+
+# Next.js
+.next/
+out/
+
+# Yarn
+.yarn/cache/
+.pnp.*
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Archives
+*.zip
+*.tar.gz
+
+# Backups (keep structure but exclude node_modules)
+backups/*/node_modules/
+backups/*/.next/
+
+# Large binary files
+*.node
+*.so
+*.dylib
+
+# Solidity
+hardhat/cache/
+hardhat/artifacts/
+

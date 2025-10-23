@@ -1,0 +1,215 @@
+version: '3.8'
+
+services:
+  # Quantum Settlement Node API
+  qsn-api:
+    build: .
+    container_name: qsn-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - RPC_URL=http://qsmart-node:26657
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - FIAT_TOKEN_ADDRESS=${FIAT_TOKEN_ADDRESS}
+      - COMPLIANCE_GATE_ADDRESS=${COMPLIANCE_GATE_ADDRESS}
+      - FEE_ROUTER_ADDRESS=${FEE_ROUTER_ADDRESS}
+      - RESERVE_REGISTRY_ADDRESS=${RESERVE_REGISTRY_ADDRESS}
+    depends_on:
+      - qsmart-node
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # QSmart Blockchain Node
+  qsmart-node:
+    image: qsmart/node:latest
+    container_name: qsmart-node
+    ports:
+      - "26656:26656"
+      - "26657:26657"
+      - "1317:1317"
+    environment:
+      - CHAIN_ID=qsn-001
+      - MONIKER=qsn-validator-01
+      - PQC_SIGNATURE_SCHEME=dilithium2
+      - PQC_KEM_SCHEME=kyber768
+    volumes:
+      - qsmart-data:/root/.qsmartd
+      - ./chain/config:/config
+    command: >
+      qsmartd start
+      --home /root/.qsmartd
+      --config /config/validators.yaml
+      --rpc.laddr tcp://0.0.0.0:26657
+      --p2p.laddr tcp://0.0.0.0:26656
+      --api.address tcp://0.0.0.0:1317
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: qsn-postgres
+    environment:
+      - POSTGRES_DB=qsn
+      - POSTGRES_USER=qsn
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: qsn-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Reserve Oracle Service
+  reserve-oracle:
+    build: .
+    container_name: qsn-oracle
+    environment:
+      - NODE_ENV=production
+      - RPC_URL=http://qsmart-node:26657
+      - PRIVATE_KEY=${ORACLE_PRIVATE_KEY}
+      - RESERVE_REGISTRY_ADDRESS=${RESERVE_REGISTRY_ADDRESS}
+      - EXTERNAL_ORACLES=${EXTERNAL_ORACLES}
+      - ATTESTATION_INTERVAL=300000
+    depends_on:
+      - qsmart-node
+      - postgres
+    volumes:
+      - ./oracle:/app/oracle
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Compliance Service
+  compliance-service:
+    build: .
+    container_name: qsn-compliance
+    environment:
+      - NODE_ENV=production
+      - RPC_URL=http://qsmart-node:26657
+      - PRIVATE_KEY=${COMPLIANCE_PRIVATE_KEY}
+      - COMPLIANCE_GATE_ADDRESS=${COMPLIANCE_GATE_ADDRESS}
+      - KYC_PROVIDER=${KYC_PROVIDER}
+      - SANCTIONS_API_KEY=${SANCTIONS_API_KEY}
+    depends_on:
+      - qsmart-node
+      - postgres
+    volumes:
+      - ./compliance:/app/compliance
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: qsn-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: qsn-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  # Log Aggregation - ELK Stack
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: qsn-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: qsn-logstash
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logs:/usr/share/logstash/logs
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: qsn-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - qsn-network
+
+volumes:
+  qsmart-data:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  elasticsearch-data:
+
+networks:
+  qsn-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
