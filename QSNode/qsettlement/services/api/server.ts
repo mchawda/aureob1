@@ -35,7 +35,19 @@ const CONTRACT_ADDRESSES = {
 
 // Provider setup
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || '', provider);
+
+// Only create wallet if private key is provided
+let wallet: ethers.Wallet | null = null;
+if (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length > 0) {
+  try {
+    wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+  } catch (error) {
+    console.warn('⚠️  Warning: Could not initialize wallet with provided private key');
+    console.warn('Read-only mode enabled. Transactions will not work.');
+  }
+} else {
+  console.warn('⚠️  Warning: PRIVATE_KEY not provided. Read-only mode enabled.');
+}
 
 // Contract ABIs (simplified for demo)
 const FiatTokenABI = [
@@ -78,11 +90,12 @@ const ReserveRegistryABI = [
   "function getReserveRatio(string calldata currency) external view returns (uint256)"
 ];
 
-// Contract instances
-const fiatToken = new ethers.Contract(CONTRACT_ADDRESSES.fiatToken, FiatTokenABI, wallet);
-const complianceGate = new ethers.Contract(CONTRACT_ADDRESSES.complianceGate, ComplianceGateABI, wallet);
-const feeRouter = new ethers.Contract(CONTRACT_ADDRESSES.feeRouter, FeeRouterABI, wallet);
-const reserveRegistry = new ethers.Contract(CONTRACT_ADDRESSES.reserveRegistry, ReserveRegistryABI, wallet);
+// Contract instances - use provider for read-only calls, wallet for transactions
+const signer = wallet || provider;
+const fiatToken = new ethers.Contract(CONTRACT_ADDRESSES.fiatToken, FiatTokenABI, signer);
+const complianceGate = new ethers.Contract(CONTRACT_ADDRESSES.complianceGate, ComplianceGateABI, signer);
+const feeRouter = new ethers.Contract(CONTRACT_ADDRESSES.feeRouter, FeeRouterABI, signer);
+const reserveRegistry = new ethers.Contract(CONTRACT_ADDRESSES.reserveRegistry, ReserveRegistryABI, signer);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
