@@ -57,6 +57,21 @@ Aureo is a **quantum-resistant banking infrastructure** that enables real-time s
 
 ---
 
+## 🎬 Demo Video
+
+Watch a complete walkthrough of the Aureo Quantum Settlement Node:
+
+[![Aureo Demo](https://img.shields.io/badge/Watch-Demo%20Video-red?logo=loom&logoColor=white)](https://www.loom.com/share/cf8da485d2db4bb8ab03dc87b6a9744a?sid=897566b3-f483-45d4-8e1d-d4167c891b7f)
+
+**Video covers:**
+- 📱 iOS Wallet features (deposit, withdraw, transactions)
+- 📊 Web Dashboard with live metrics
+- ⚡ Sub-1s settlement finality demonstration
+- ✅ Compliance & KYC verification flows
+- 🔒 Post-quantum cryptography in action
+
+---
+
 ## 📁 Project Structure
 
 ```
