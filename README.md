@@ -8,6 +8,12 @@
 
 ---
 
+## 🎬 Quick Demo
+
+![Aureo Demo](QSNode/public/AureoDemo.gif)
+
+---
+
 ## 🎯 Overview
 
 Aureo is a **quantum-resistant banking infrastructure** that enables real-time settlement of digital assets with:
