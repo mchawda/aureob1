@@ -10,7 +10,7 @@
 
 ## 🎬 Quick Demo
 
-![Aureo Demo](QSNode/public/AureoDemo.gif)
+![Aureo Demo](./QSNode/public/AureoDemo.gif)
 
 ---
 
